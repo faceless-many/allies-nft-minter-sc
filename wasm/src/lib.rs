@@ -13,6 +13,8 @@ elrond_wasm_node::wasm_endpoints! {
         getAllowlistAddressCheck
         getAllowlistSize
         getDropTokensLeft
+        getFileExtension
+        getFilename
         getMintedPerAddressPerDrop
         getMintedPerAddressTotal
         getNftPrice
@@ -28,6 +30,7 @@ elrond_wasm_node::wasm_endpoints! {
         pauseMinting
         populateIndexes
         setDrop
+        setFilename
         setLocalRoles
         setNewPrice
         setNewTokensLimitPerAddress
