@@ -12,6 +12,7 @@ const ATTR_SEPARATOR: &[u8] = ";".as_bytes();
 const URI_SLASH: &[u8] = "/".as_bytes();
 const TAGS_KEY_NAME: &[u8] = "tags:".as_bytes();
 const DEFAULT_IMG_FILE_EXTENSION: &[u8] = ".png".as_bytes();
+const DEFAULT_IMG_FILENAME: &[u8] = "1".as_bytes();
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
@@ -28,6 +29,7 @@ pub trait ElvenTools {
         royalties: BigUint,
         selling_price: BigUint,
         #[var_args] file_extension: OptionalArg<ManagedBuffer>,
+        #[var_args] filename: OptionalArg<ManagedBuffer>,
         #[var_args] tags: OptionalArg<ManagedBuffer>,
         #[var_args] provenance_hash: OptionalArg<ManagedBuffer>,
         #[var_args] is_metadata_in_uris: OptionalArg<bool>,
@@ -58,6 +60,11 @@ pub trait ElvenTools {
             &file_extension
                 .into_option()
                 .unwrap_or_else(|| ManagedBuffer::new_from_bytes(DEFAULT_IMG_FILE_EXTENSION)),
+        );
+        self.filename().set_if_empty(
+            &filename
+                .into_option()
+                .unwrap_or_else(|| ManagedBuffer::new_from_bytes(DEFAULT_IMG_FILENAME)),
         );
         self.is_metadata_in_uris()
             .set_if_empty(&is_metadata_in_uris.into_option().unwrap_or_default());
@@ -220,6 +227,14 @@ pub trait ElvenTools {
     #[endpoint(setNewTokensLimitPerAddress)]
     fn set_new_tokens_limit_per_address(&self, limit: u32) -> SCResult<()> {
         self.tokens_limit_per_address_total().set(limit);
+        Ok(())
+    }
+
+    #[only_owner]
+    #[endpoint(setFilename)]
+    fn set_filename(&self, filename: ManagedBuffer, file_extension: ManagedBuffer) -> SCResult<()> {
+        self.filename().set(filename);
+        self.file_extension().set(file_extension);
         Ok(())
     }
 
@@ -443,18 +458,18 @@ pub trait ElvenTools {
         let amount = &BigUint::from(NFT_AMOUNT);
 
         let token = self.nft_token_id().get();
-        let token_name = self.build_token_name_buffer(next_index_to_mint_tuple.1);
+        let token_name = self.build_token_name_buffer();
 
         let royalties = self.royalties().get();
 
-        let attributes = self.build_attributes_buffer(next_index_to_mint_tuple.1);
+        let attributes = self.build_attributes_buffer();
 
         let attributes_hash = self
             .crypto()
             .sha256_legacy(&attributes.to_boxed_bytes().as_slice());
         let hash_buffer = ManagedBuffer::from(attributes_hash.as_bytes());
 
-        let uris = self.build_uris_vec(next_index_to_mint_tuple.1);
+        let uris = self.build_uris_vec();
 
         let nonce = self.send().esdt_nft_create(
             &token,
@@ -602,7 +617,7 @@ pub trait ElvenTools {
         }
     }
 
-    fn build_uris_vec(&self, index_to_mint: u32) -> ManagedVec<ManagedBuffer> {
+    fn build_uris_vec(&self) -> ManagedVec<ManagedBuffer> {
         use alloc::string::ToString;
 
         let is_metadata_in_uris = self.is_metadata_in_uris().get();
@@ -614,12 +629,12 @@ pub trait ElvenTools {
         let uri_slash = ManagedBuffer::new_from_bytes(URI_SLASH);
         let metadata_file_extension = ManagedBuffer::new_from_bytes(METADATA_FILE_EXTENSION);
         let image_file_extension = self.file_extension().get();
-        let file_index = ManagedBuffer::from(index_to_mint.to_string().as_bytes());
+        let file_name = self.filename().get();
 
         let mut img_ipfs_gateway_uri = ManagedBuffer::new_from_bytes(IPFS_GATEWAY_HOST);
         img_ipfs_gateway_uri.append(&image_cid);
         img_ipfs_gateway_uri.append(&uri_slash);
-        img_ipfs_gateway_uri.append(&file_index);
+        img_ipfs_gateway_uri.append(&file_name);
         img_ipfs_gateway_uri.append(&image_file_extension);
 
         uris.push(img_ipfs_gateway_uri);
@@ -628,7 +643,7 @@ pub trait ElvenTools {
             let mut ipfs_metadata_uri = ManagedBuffer::new_from_bytes(IPFS_GATEWAY_HOST);
             ipfs_metadata_uri.append(&metadata_cid);
             ipfs_metadata_uri.append(&uri_slash);
-            ipfs_metadata_uri.append(&file_index);
+            ipfs_metadata_uri.append(&file_name);
             ipfs_metadata_uri.append(&metadata_file_extension);
 
             uris.push(ipfs_metadata_uri);
@@ -638,12 +653,11 @@ pub trait ElvenTools {
     }
 
     // This can be probably optimized with attributes struct, had problems with decoding on the api side
-    fn build_attributes_buffer(&self, index_to_mint: u32) -> ManagedBuffer {
+    fn build_attributes_buffer(&self) -> ManagedBuffer {
         use alloc::string::ToString;
 
         let metadata_key_name = ManagedBuffer::new_from_bytes(METADATA_KEY_NAME);
-        let metadata_index_file =
-            ManagedBuffer::new_from_bytes(index_to_mint.to_string().as_bytes());
+        let metadata_filename = self.filename().get();
         let metadata_file_extension = ManagedBuffer::new_from_bytes(METADATA_FILE_EXTENSION);
         let metadata_cid = self.metadata_base_cid().get();
         let separator = ManagedBuffer::new_from_bytes(ATTR_SEPARATOR);
@@ -657,23 +671,23 @@ pub trait ElvenTools {
         attributes.append(&metadata_key_name);
         attributes.append(&metadata_cid);
         attributes.append(&metadata_slash);
-        attributes.append(&metadata_index_file);
+        attributes.append(&metadata_filename);
         attributes.append(&metadata_file_extension);
 
         attributes
     }
 
-    fn build_token_name_buffer(&self, index_to_mint: u32) -> ManagedBuffer {
+    fn build_token_name_buffer(&self) -> ManagedBuffer {
         use alloc::string::ToString;
 
         let mut full_token_name = ManagedBuffer::new();
         let token_name_from_storage = self.nft_token_name().get();
-        let token_index = ManagedBuffer::new_from_bytes(index_to_mint.to_string().as_bytes());
+        let filename = self.filename().get();
         let hash_sign = ManagedBuffer::new_from_bytes(" #".as_bytes());
 
         full_token_name.append(&token_name_from_storage);
         full_token_name.append(&hash_sign);
-        full_token_name.append(&token_index);
+        full_token_name.append(&filename);
 
         full_token_name
     }
@@ -786,8 +800,13 @@ pub trait ElvenTools {
     #[storage_mapper("metadaBaseCid")]
     fn metadata_base_cid(&self) -> SingleValueMapper<ManagedBuffer>;
 
-    #[storage_mapper("file_extension")]
+    #[view(getFileExtension)]
+    #[storage_mapper("fileExtension")]
     fn file_extension(&self) -> SingleValueMapper<ManagedBuffer>;
+    
+    #[view(getFilename)]
+    #[storage_mapper("filename")]
+    fn filename(&self) -> SingleValueMapper<ManagedBuffer>;
 
     #[storage_mapper("amountOfTokensTotal")]
     fn amount_of_tokens_total(&self) -> SingleValueMapper<u32>;
