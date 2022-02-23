@@ -1,11 +1,11 @@
 {
     "buildInfo": {
         "rustc": {
-            "version": "1.59.0-nightly",
-            "commitHash": "e012a191d768adeda1ee36a99ef8b92d51920154",
-            "commitDate": "2022-01-06",
+            "version": "1.60.0-nightly",
+            "commitHash": "e0a55f4491a729bffc63b402ba903d90858c806b",
+            "commitDate": "2022-01-28",
             "channel": "Nightly",
-            "short": "rustc 1.59.0-nightly (e012a191d 2022-01-06)"
+            "short": "rustc 1.60.0-nightly (e0a55f449 2022-01-28)"
         },
         "contractCrate": {
             "name": "elven-nft-minter",
@@ -45,6 +45,11 @@
             },
             {
                 "name": "file_extension",
+                "type": "optional<bytes>",
+                "multi_arg": true
+            },
+            {
+                "name": "filename",
                 "type": "optional<bytes>",
                 "multi_arg": true
             },
@@ -172,6 +177,22 @@
             "outputs": []
         },
         {
+            "name": "setFilename",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "filename",
+                    "type": "bytes"
+                },
+                {
+                    "name": "file_extension",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
             "name": "giveaway",
             "onlyOwner": true,
             "mutability": "mutable",
@@ -201,46 +222,6 @@
             "inputs": [
                 {
                     "name": "amount",
-                    "type": "u32"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "name": "enableAllowlist",
-            "onlyOwner": true,
-            "mutability": "mutable",
-            "inputs": [],
-            "outputs": []
-        },
-        {
-            "name": "disableAllowlist",
-            "onlyOwner": true,
-            "mutability": "mutable",
-            "inputs": [],
-            "outputs": []
-        },
-        {
-            "name": "populateAllowlist",
-            "onlyOwner": true,
-            "mutability": "mutable",
-            "inputs": [
-                {
-                    "name": "addresses",
-                    "type": "List<Address>"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "name": "mint",
-            "mutability": "mutable",
-            "payableInTokens": [
-                "EGLD"
-            ],
-            "inputs": [
-                {
-                    "name": "amount_of_tokens",
                     "type": "u32"
                 }
             ],
@@ -394,6 +375,26 @@
             "outputs": [
                 {
                     "type": "bool"
+                }
+            ]
+        },
+        {
+            "name": "getFileExtension",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "getFilename",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes"
                 }
             ]
         }
