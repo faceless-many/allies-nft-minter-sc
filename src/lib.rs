@@ -144,66 +144,6 @@ pub trait ElvenTools {
         Ok(())
     }
 
-    #[only_owner]
-    #[endpoint(setDrop)]
-    fn set_drop(
-        &self,
-        amount_of_tokens_per_drop: u32,
-        #[var_args] tokens_limit_per_address_per_drop: OptionalArg<u32>,
-    ) -> SCResult<()> {
-        let total_tokens_left = self.total_tokens_left().ok().unwrap_or_default();
-
-        require!(
-            amount_of_tokens_per_drop <= total_tokens_left,
-            "The number of tokens per drop can't be higher than the total amount of tokens left!"
-        );
-
-        let tokens_limit = tokens_limit_per_address_per_drop
-            .into_option()
-            .unwrap_or_default();
-        let tokens_limit_total = self.tokens_limit_per_address_total().get();
-
-        require!(tokens_limit <= tokens_limit_total, "The tokens limit per address per drop should be smaller or equal to the total limit of tokens per address!");
-
-        if tokens_limit > 0 {
-            self.tokens_limit_per_address_per_drop().set(tokens_limit);
-        } else {
-            self.tokens_limit_per_address_per_drop()
-                .set(amount_of_tokens_per_drop);
-        }
-
-        self.minted_indexes_by_drop().clear();
-        self.amount_of_tokens_per_drop()
-            .set(&amount_of_tokens_per_drop);
-
-        if self.opened_drop().is_empty() {
-            self.opened_drop().set(1);
-        } else {
-            self.opened_drop().update(|sum| *sum += 1);
-        }
-
-        Ok(())
-    }
-
-    #[only_owner]
-    #[endpoint(unsetDrop)]
-    fn unset_drop(&self) -> SCResult<()> {
-        self.minted_indexes_by_drop().clear();
-        self.amount_of_tokens_per_drop().clear();
-        self.tokens_limit_per_address_per_drop().clear();
-        self.opened_drop().clear();
-        Ok(())
-    }
-
-    // The owner can change the price, for example, a new price for the next nft drop.
-    #[only_owner]
-    #[endpoint(setNewPrice)]
-    fn set_new_price(&self, price: BigUint) -> SCResult<()> {
-        self.selling_price().set(&price);
-
-        Ok(())
-    }
-
     // The owner can change CIDs only before any NFT is minted!
     #[only_owner]
     #[endpoint(changeBaseCids)]
@@ -541,15 +481,14 @@ pub trait ElvenTools {
     }
 
     fn build_token_name_buffer(&self) -> ManagedBuffer {
-        use alloc::string::ToString;
 
         let mut full_token_name = ManagedBuffer::new();
         let token_name_from_storage = self.nft_token_name().get();
         let filename = self.filename().get();
-        let hash_sign = ManagedBuffer::new_from_bytes(" #".as_bytes());
+        let dash_sign = ManagedBuffer::new_from_bytes(" - ".as_bytes());
 
         full_token_name.append(&token_name_from_storage);
-        full_token_name.append(&hash_sign);
+        full_token_name.append(&dash_sign);
         full_token_name.append(&filename);
 
         full_token_name
