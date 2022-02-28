@@ -21,6 +21,7 @@ elrond_wasm_node::wasm_endpoints! {
         getNftTokenId
         getNftTokenName
         getProvenanceHash
+        getTokenNameSuffix
         getTokensLimitPerAddressPerDrop
         getTokensLimitPerAddressTotal
         getTotalTokensLeft
@@ -29,13 +30,10 @@ elrond_wasm_node::wasm_endpoints! {
         issueToken
         pauseMinting
         populateIndexes
-        setDrop
         setFilename
         setLocalRoles
-        setNewPrice
         setNewTokensLimitPerAddress
         shuffle
         startMinting
-        unsetDrop
     )
 }

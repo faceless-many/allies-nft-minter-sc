@@ -13,6 +13,7 @@ const URI_SLASH: &[u8] = "/".as_bytes();
 const TAGS_KEY_NAME: &[u8] = "tags:".as_bytes();
 const DEFAULT_IMG_FILE_EXTENSION: &[u8] = ".png".as_bytes();
 const DEFAULT_IMG_FILENAME: &[u8] = "1".as_bytes();
+const DEFAULT_TOKEN_SUFFIX: &[u8] = "1".as_bytes();
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
@@ -30,6 +31,7 @@ pub trait ElvenTools {
         selling_price: BigUint,
         #[var_args] file_extension: OptionalArg<ManagedBuffer>,
         #[var_args] filename: OptionalArg<ManagedBuffer>,
+        #[var_args] token_name_suffix: OptionalArg<ManagedBuffer>,
         #[var_args] tags: OptionalArg<ManagedBuffer>,
         #[var_args] provenance_hash: OptionalArg<ManagedBuffer>,
         #[var_args] is_metadata_in_uris: OptionalArg<bool>,
@@ -65,6 +67,11 @@ pub trait ElvenTools {
             &filename
                 .into_option()
                 .unwrap_or_else(|| ManagedBuffer::new_from_bytes(DEFAULT_IMG_FILENAME)),
+        );
+        self.token_name_suffix().set_if_empty(
+            &token_name_suffix
+                .into_option()
+                .unwrap_or_else(|| ManagedBuffer::new_from_bytes(DEFAULT_TOKEN_SUFFIX)),
         );
         self.is_metadata_in_uris()
             .set_if_empty(&is_metadata_in_uris.into_option().unwrap_or_default());
@@ -172,9 +179,10 @@ pub trait ElvenTools {
 
     #[only_owner]
     #[endpoint(setFilename)]
-    fn set_filename(&self, filename: ManagedBuffer, file_extension: ManagedBuffer) -> SCResult<()> {
+    fn set_filename(&self, filename: ManagedBuffer, file_extension: ManagedBuffer, token_name_suffix: ManagedBuffer) -> SCResult<()> {
         self.filename().set(filename);
         self.file_extension().set(file_extension);
+        self.token_name_suffix().set(token_name_suffix);
         Ok(())
     }
 
@@ -481,15 +489,14 @@ pub trait ElvenTools {
     }
 
     fn build_token_name_buffer(&self) -> ManagedBuffer {
+        use alloc::string::ToString;
 
         let mut full_token_name = ManagedBuffer::new();
-        let token_name_from_storage = self.nft_token_name().get();
-        let filename = self.filename().get();
-        let dash_sign = ManagedBuffer::new_from_bytes(" - ".as_bytes());
+        let token_name_suffix = self.token_name_suffix().get();
+        let token_prefix = ManagedBuffer::new_from_bytes("Faceless Allies - ".as_bytes());
 
-        full_token_name.append(&token_name_from_storage);
-        full_token_name.append(&dash_sign);
-        full_token_name.append(&filename);
+        full_token_name.append(&token_prefix);
+        full_token_name.append(&token_name_suffix);
 
         full_token_name
     }
@@ -609,6 +616,10 @@ pub trait ElvenTools {
     #[view(getFilename)]
     #[storage_mapper("filename")]
     fn filename(&self) -> SingleValueMapper<ManagedBuffer>;
+    
+    #[view(getTokenNameSuffix)]
+    #[storage_mapper("token_name_suffix")]
+    fn token_name_suffix(&self) -> SingleValueMapper<ManagedBuffer>;
 
     #[storage_mapper("amountOfTokensTotal")]
     fn amount_of_tokens_total(&self) -> SingleValueMapper<u32>;
