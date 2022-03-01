@@ -27,6 +27,7 @@ elrond_wasm_node::wasm_endpoints! {
         getTotalTokensLeft
         giveaway
         isAllowlistEnabled
+        isDropActive
         issueToken
         pauseMinting
         populateIndexes
