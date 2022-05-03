@@ -1,12 +1,15 @@
 ### NFT minter Smart Contract 
 
 - Docs: [www.elven.tools](https://www.elven.tools)
+- Elven Tools Twitter: [www.twitter.com/ElvenTools](https://twitter.com/ElvenTools)
 - Quick jumpstart: [www.elven.tools/docs/jump-start.html](https://www.elven.tools/docs/jump-start.html)
-- Intro video: [https://youtu.be/resGP6a7_34](https://youtu.be/resGP6a7_34)
+- Intro video: [www.youtu.be/resGP6a7_34](https://youtu.be/resGP6a7_34)
 
-🚨 Not enough tests! As for the mainnet, use it at your own risk! 🚨
+🚨 Be aware that the Smart Contract doesn't have any audits. It has complete functionality for the first version, but it still needs some improvements. Test it first on the devnet/testnet. 🚨
 
-**You can use [elven-tools-cli](https://github.com/juliancwirko/elven-tools-cli) for deployment and interactions!**
+**You can use [elven-tools-cli](https://github.com/ElvenTools/elven-tools-cli) for deployment and interactions!**
+
+**You can use [elven-tools-dapp](https://github.com/ElvenTools/elven-tools-dapp) as your frontend dapp for minting process! (NextJS based app)**
 
 ### What is it?
 
@@ -22,9 +25,9 @@ You are reading about the Smart Contract designed for the Elrond blockchain. Its
 - claiming the developer rewards
 - changing basic setup where it is possible
 
-Check the [abi](https://github.com/juliancwirko/elven-nft-minter-sc/blob/main/output/elven-nft-minter.abi.json) file for more information.
+Check the [abi](https://github.com/ElvenTools/elven-nft-minter-sc/blob/main/output/elven-nft-minter.abi.json) file for more information.
 
-Also, check how simple it is to deploy and interact with it using [elven-tools-cli](https://github.com/juliancwirko/elven-tools-cli).
+Also, check how simple it is to deploy and interact with it using [elven-tools-cli](https://github.com/ElvenTools/elven-tools-cli).
 
 ### Check out possible workflows
 
@@ -39,7 +42,7 @@ For all commands, check out the docs: [www.elven.tools/docs/sc-endpoints.html](h
 You can always clone it and change it as you need. The best is to use the Elven Tools CLI tool, which can also be configured after changes. But nothing stops you from using the [erdpy](https://docs.elrond.com/sdk-and-tools/erdpy/erdpy/) and interacting with this Smart Contract. It is all up to you.
 
 #### TODO:
-- check [issues](https://github.com/juliancwirko/elven-nft-minter-sc/issues)
+- check [issues](https://github.com/ElvenTools/elven-nft-minter-sc/issues)
 
 **Rust devs, I would appreciate it if you could leave your insights ❤️**
 
@@ -54,7 +57,7 @@ You can always clone it and change it as you need. The best is to use the Elven 
 
 ### Issues and ideas
 
-Please post issues and ideas [here](https://github.com/juliancwirko/elven-nft-minter-sc/issues).
+Please post issues and ideas [here](https://github.com/ElvenTools/elven-nft-minter-sc/issues).
 
 ### License
 

@@ -10,8 +10,12 @@ elrond_wasm_node::wasm_endpoints! {
         callBack
         changeBaseCids
         claimScFunds
+        clearAllowlist
+        disableAllowlist
+        enableAllowlist
         getAllowlistAddressCheck
         getAllowlistSize
+        getCollectionTokenName
         getDropTokensLeft
         getFileExtension
         getFilename
@@ -24,14 +28,19 @@ elrond_wasm_node::wasm_endpoints! {
         getTokenNameSuffix
         getTokensLimitPerAddressPerDrop
         getTokensLimitPerAddressTotal
+        getTotalSupply
+        getTotalSupplyOfCurrentDrop
         getTotalTokensLeft
         giveaway
         isAllowlistEnabled
         isDropActive
+        isMintingPaused
         issueToken
         pauseMinting
         populateIndexes
         setFilename
+        removeAllowlistAddress
+        setDrop
         setLocalRoles
         setNewTokensLimitPerAddress
         shuffle

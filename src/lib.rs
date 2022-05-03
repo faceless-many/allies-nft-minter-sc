@@ -2,10 +2,9 @@
 
 use core::convert::TryInto;
 
-extern crate alloc;
-
 const NFT_AMOUNT: u32 = 1;
 const ROYALTIES_MAX: u32 = 10_000;
+const HASH_DATA_BUFFER_LEN: usize = 1024;
 // This is the most popular gateway, but it doesn't matter the most important is IPFS CID
 const IPFS_GATEWAY_HOST: &[u8] = "https://ipfs.io/ipfs/".as_bytes();
 const METADATA_KEY_NAME: &[u8] = "metadata:".as_bytes();
@@ -16,12 +15,6 @@ const TAGS_KEY_NAME: &[u8] = "tags:".as_bytes();
 const DEFAULT_IMG_FILE_EXTENSION: &[u8] = ".png".as_bytes();
 const DEFAULT_IMG_FILENAME: &[u8] = "1".as_bytes();
 const DEFAULT_TOKEN_SUFFIX: &[u8] = "1".as_bytes();
-
-// temporary until managed sha256 is activated on mainnet
-// cannot use sha256_legacy, as that allocates dynamic memory
-extern "C" {
-    fn sha256(dataOffset: *const u8, length: i32, resultOffset: *mut u8) -> i32;
-}
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
@@ -95,19 +88,29 @@ pub trait ElvenTools {
     fn issue_token(
         &self,
         #[payment] issue_cost: BigUint,
-        token_name: ManagedBuffer,
-        token_ticker: ManagedBuffer,
+        collection_token_name: ManagedBuffer,
+        collection_token_ticker: ManagedBuffer,
+        #[var_args] nft_token_name: OptionalValue<ManagedBuffer>,
     ) {
         require!(self.nft_token_id().is_empty(), "Token already issued!");
 
-        self.nft_token_name().set(&token_name);
+        let nfts_name = match nft_token_name {
+            OptionalValue::Some(name) => name,
+            OptionalValue::None => ManagedBuffer::new_from_bytes(b""),
+        };
+
+        if nfts_name.len() != 0 {
+            self.nft_token_name().set(&nfts_name);
+        }
+
+        self.collection_token_name().set(&collection_token_name);
 
         self.send()
             .esdt_system_sc_proxy()
             .issue_non_fungible(
                 issue_cost,
-                &token_name,
-                &token_ticker,
+                &collection_token_name,
+                &collection_token_ticker,
                 NonFungibleTokenProperties {
                     can_freeze: false,
                     can_wipe: false,
@@ -329,6 +332,18 @@ pub trait ElvenTools {
         self.allowlist().extend(&addresses);
     }
 
+    #[only_owner]
+    #[endpoint(clearAllowlist)]
+    fn clear_allowlist(&self) {
+        self.allowlist().clear();
+    }
+
+    #[only_owner]
+    #[endpoint(removeAllowlistAddress)]
+    fn remove_allowlist_address(&self, address: ManagedAddress) {
+        self.allowlist().remove(&address);
+    }
+
     // Main mint function - takes the payment sum for all tokens to mint.
     #[only_owner]
     #[payable("EGLD")]
@@ -444,7 +459,12 @@ pub trait ElvenTools {
         let royalties = self.royalties().get();
 
         let attributes = self.build_attributes_buffer();
-        let hash_buffer = self.hash_attributes(&attributes);
+
+        let hash_buffer = self
+            .crypto()
+            .sha256_legacy_managed::<HASH_DATA_BUFFER_LEN>(&attributes);
+
+        let attributes_hash = hash_buffer.as_managed_buffer();
 
         let uris = self.build_uris_vec();
 
@@ -453,7 +473,7 @@ pub trait ElvenTools {
             &amount,
             &token_name,
             &royalties,
-            &hash_buffer,
+            &attributes_hash,
             &attributes,
             &uris,
         );
@@ -505,35 +525,6 @@ pub trait ElvenTools {
 
         // Choose next index to mint here from shuffled Vec
         self.handle_next_index_setup(next_index_to_mint_tuple);
-    }
-
-    fn hash_attributes(&self, attributes: &ManagedBuffer) -> ManagedBuffer {
-        const HASH_DATA_BUFFER_LEN: usize = 1024;
-        const HASH_LEN: usize = 32;
-
-        let attr_len = attributes.len();
-        require!(
-            attr_len <= HASH_DATA_BUFFER_LEN,
-            "Attributes too long, cannot copy into static buffer"
-        );
-
-        let mut attributes_buffer = [0u8; HASH_DATA_BUFFER_LEN];
-        let mut hash_buffer = [0u8; HASH_LEN];
-
-        let attributes_buffer_slice = &mut attributes_buffer[..attr_len];
-        let load_result = attributes.load_slice(0, attributes_buffer_slice);
-        require!(load_result.is_ok(), "Failed to load attributes into buffer");
-
-        unsafe {
-            let hash_result = sha256(
-                attributes_buffer_slice.as_ptr(),
-                attr_len as i32,
-                hash_buffer.as_mut_ptr(),
-            );
-            require!(hash_result == 0, "Failed hashing attributes");
-        }
-
-        ManagedBuffer::new_from_bytes(&hash_buffer[..])
     }
 
     #[endpoint(shuffle)]
@@ -671,7 +662,7 @@ pub trait ElvenTools {
     fn build_token_name_buffer(&self) -> ManagedBuffer {
         let mut full_token_name = ManagedBuffer::new();
         let token_name_suffix = self.token_name_suffix().get();
-        let token_prefix = ManagedBuffer::new_from_bytes("Faceless Allies - ".as_bytes());
+        let token_prefix = ManagedBuffer::new_from_bytes("".as_bytes());
 
         full_token_name.append(&token_prefix);
         full_token_name.append(&token_name_suffix);
@@ -771,6 +762,10 @@ pub trait ElvenTools {
     #[storage_mapper("nftTokenId")]
     fn nft_token_id(&self) -> SingleValueMapper<TokenIdentifier>;
 
+    #[view(getCollectionTokenName)]
+    #[storage_mapper("collectionTokenName")]
+    fn collection_token_name(&self) -> SingleValueMapper<ManagedBuffer>;
+
     #[view(getNftTokenName)]
     #[storage_mapper("nftTokenName")]
     fn nft_token_name(&self) -> SingleValueMapper<ManagedBuffer>;
@@ -803,6 +798,18 @@ pub trait ElvenTools {
     #[storage_mapper("isDropActive")]
     fn is_drop_active(&self) -> SingleValueMapper<bool>;
 
+    #[view(getTotalSupply)]
+    #[storage_mapper("amountOfTokensTotal")]
+    fn amount_of_tokens_total(&self) -> SingleValueMapper<u32>;
+
+    #[view(isMintingPaused)]
+    #[storage_mapper("paused")]
+    fn paused(&self) -> SingleValueMapper<bool>;
+
+    #[view(getTotalSupplyOfCurrentDrop)]
+    #[storage_mapper("amountOfTokensPerDrop")]
+    fn amount_of_tokens_per_drop(&self) -> SingleValueMapper<u32>;
+
     #[storage_mapper("lastDrop")]
     fn last_drop(&self) -> SingleValueMapper<u16>;
 
@@ -830,9 +837,6 @@ pub trait ElvenTools {
     #[storage_mapper("token_name_suffix")]
     fn token_name_suffix(&self) -> SingleValueMapper<ManagedBuffer>;
 
-    #[storage_mapper("amountOfTokensTotal")]
-    fn amount_of_tokens_total(&self) -> SingleValueMapper<u32>;
-
     #[storage_mapper("mintedIndexesTotal")]
     fn minted_indexes_total(&self) -> SingleValueMapper<u32>;
 
@@ -842,14 +846,8 @@ pub trait ElvenTools {
     #[storage_mapper("royalties")]
     fn royalties(&self) -> SingleValueMapper<BigUint>;
 
-    #[storage_mapper("paused")]
-    fn paused(&self) -> SingleValueMapper<bool>;
-
     #[storage_mapper("tags")]
     fn tags(&self) -> SingleValueMapper<ManagedBuffer>;
-
-    #[storage_mapper("amountOfTokensPerDrop")]
-    fn amount_of_tokens_per_drop(&self) -> SingleValueMapper<u32>;
 
     #[storage_mapper("nextIndexToMint")]
     fn next_index_to_mint(&self) -> SingleValueMapper<(usize, u32)>;
