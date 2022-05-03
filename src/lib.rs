@@ -214,10 +214,10 @@ pub trait ElvenTools {
     #[only_owner]
     #[endpoint(changeBaseCids)]
     fn change_base_cids(&self, image_base_cid: ManagedBuffer, metadata_base_cid: ManagedBuffer) {
-        require!(
-            self.minted_indexes_total().is_empty(),
-            "You can't change the CIDs. There are some tokens minted already!"
-        );
+        // require!(
+        //     self.minted_indexes_total().is_empty(),
+        //     "You can't change the CIDs. There are some tokens minted already!"
+        // );
 
         self.image_base_cid().set(&image_base_cid);
         self.metadata_base_cid().set(&metadata_base_cid);
