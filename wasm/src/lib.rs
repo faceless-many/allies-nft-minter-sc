@@ -36,14 +36,18 @@ elrond_wasm_node::wasm_endpoints! {
         isDropActive
         isMintingPaused
         issueToken
+        mint
         pauseMinting
+        populateAllowlist
         populateIndexes
-        setFilename
         removeAllowlistAddress
         setDrop
+        setFilename
         setLocalRoles
+        setNewPrice
         setNewTokensLimitPerAddress
         shuffle
         startMinting
+        unsetDrop
     )
 }
